@@ -19,9 +19,7 @@ class Message:
 
     @staticmethod
     def ping():
-        msg = Message("PING")
-        msg.data["sent"] = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f")
-        return msg
+        return Message("PING")
 
     @staticmethod
     def signature():

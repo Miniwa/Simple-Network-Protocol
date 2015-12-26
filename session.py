@@ -16,8 +16,11 @@ class Session:
 
     def recv_raw_message(self):
         size = self.recv_bytes(4)
-        size = struct.unpack("!I", size)[0]
+        if size is None:
+            #Connection was closed.
+            return None
 
+        size = struct.unpack("!I", size)[0]
         raw_data = self.recv_bytes(size)
 
         return raw_data
@@ -28,6 +31,8 @@ class Session:
 
         while received != nr_bytes:
             chunk = self.socket.recv(nr_bytes)
+            if not chunk:
+                return None
             received += len(chunk)
             data += chunk
 

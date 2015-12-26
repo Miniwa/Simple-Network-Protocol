@@ -35,8 +35,8 @@ class Server:
 
     def get_handler(self, message_id):
         found = [pair for pair in self.handlers if pair[0] == message_id]
-        if found != 0:
-            return found[1]
+        if found:
+            return found[0][1]
 
         return None
 
@@ -64,22 +64,28 @@ class Server:
             self.serve_session(ses)
 
     def serve_session(self, session):
-        while True:
-            msg = session.recv_message(self.formatter)
-            if msg is None:
-                print("Connection closed.")
-                break
+        try:
+            while True:
+                msg = session.recv_message(self.formatter)
+                if msg is None:
+                    break
 
-            #Check for special messages.
-            if msg.id == "GET_SIGNATURE":
-                resp = self.get_signature()
-            else:
-                #Try to find a matching handler.
-                handler = self.get_handler(msg.id)
-                if handler is not None:
-                    resp = handler(msg)
+                #Check for special messages.
+                if msg.id == "GET_SIGNATURE":
+                    resp = self.get_signature()
                 else:
-                    resp = Message.error("Unsupported method was invoked.")
+                    #Try to find a matching handler.
+                    handler = self.get_handler(msg.id)
+                    if handler is not None:
+                        resp = handler(msg)
+                    else:
+                        resp = Message.error("Method {0} is not supported by the remote host.".format(msg.id))
 
-            #Send response.
-            session.send_message(resp, self.formatter)
+                #Send response.
+                session.send_message(resp, self.formatter)
+
+            print("Connection closed gracefully.")
+        except socket.timeout:
+            print("Connection timed out.")
+        except OSError:
+            print("Connection was forcibly closed.")
