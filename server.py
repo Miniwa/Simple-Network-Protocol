@@ -1,4 +1,5 @@
 import socket
+from concurrent.futures import ThreadPoolExecutor
 from .session import Session
 from .formatter import Formatter, JSONFormatter
 from .message import Message
@@ -7,6 +8,7 @@ from .handlers import handle_ping, handle_error
 class Server:
     def __init__(self):
         self.formatter = JSONFormatter()
+        self.th_executor = ThreadPoolExecutor(max_workers=50)
         self.handlers = []
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -16,10 +18,18 @@ class Server:
 
     def register_handler(self, message_id, handler_function):
         found = [pair for pair in self.handlers if pair[0] == message_id]
-        if len(found) != 0:
+        if found:
             raise KeyError("Duplicate handler already exists.")
 
         self.handlers.append((message_id, handler_function))
+
+    def unregister_handler(self, message_id):
+        found = [pair for pair in self.handlers if pair[0] == message_id]
+        if not found:
+            raise KeyError("No such handler exists.")
+
+        self.handlers.remove(found[0])
+
 
     def set_formatter(self, formatter):
         if not isinstance(formatter, Formatter):
@@ -61,7 +71,9 @@ class Server:
             print("New connection from {0}".format(address))
 
             ses = Session(client_socket)
-            self.serve_session(ses)
+
+            #Schedule handling of the session.
+            self.th_executor.submit(self.serve_session, ses)
 
     def serve_session(self, session):
         try:

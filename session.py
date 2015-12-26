@@ -1,4 +1,4 @@
-import socket, struct
+import struct
 
 class Session:
     def __init__(self, sock):
